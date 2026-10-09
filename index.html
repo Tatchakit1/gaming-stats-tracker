@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gaming Stats Tracker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#15122b;--panel:#1f1b40;--line:#352f66;--text:#ecebff;--mute:#9d99c9;--win:#4fe0b0;--loss:#ff5d73;--gold:#ffc857;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:400 16px/1.5 "IBM Plex Sans",system-ui,sans-serif}
+h1,h2,.big{font-family:"Chakra Petch",system-ui,sans-serif;margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding:24px 16px 56px}
+header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;margin-bottom:24px}
+h1{font-size:1.6rem;font-weight:700}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+button,select,input{font:inherit;color:inherit}
+.tab{background:transparent;border:1px solid var(--line);padding:8px 14px;border-radius:6px;cursor:pointer}
+.tab[aria-pressed="true"]{background:var(--text);color:var(--bg);border-color:var(--text);font-weight:600}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.hero{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:16px;margin-bottom:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:20px}
+.big{font-size:4.2rem;font-weight:700;line-height:1;letter-spacing:-.02em}
+.stat .big{font-size:2.6rem}
+.lbl{color:var(--mute);font-size:.9rem}
+.form-strip{display:flex;gap:4px;margin-top:16px;flex-wrap:wrap}
+.form-strip i{width:14px;height:22px;border-radius:3px;background:var(--win)}
+.form-strip i.l{background:var(--loss)}
+.grid{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px}
+h2{font-size:1.1rem;margin-bottom:12px}
+svg.chart{width:100%;height:auto;display:block}
+.empty{color:var(--mute);padding:24px 0}
+.goal{margin-bottom:16px}
+.goal-row{display:flex;justify-content:space-between;gap:8px;font-size:.92rem;margin-bottom:6px}
+.bar{height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--gold);border-radius:4px}
+.bar span.done{background:var(--win)}
+label{display:block;font-size:.85rem;color:var(--mute);margin-bottom:4px}
+input,select{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;align-items:end}
+.primary{background:var(--win);color:#0d2a21;border:0;padding:10px 16px;border-radius:6px;font-weight:600;cursor:pointer}
+.link{background:none;border:0;color:var(--mute);cursor:pointer;text-decoration:underline;padding:4px}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:520px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);font-size:.92rem}
+th{color:var(--mute);font-weight:500}
+.w{color:var(--win);font-weight:600}.l{color:var(--loss);font-weight:600}
+@media(max-width:760px){.hero,.grid{grid-template-columns:1fr}.big{font-size:3.4rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Gaming Stats Tracker</h1>
+    <div class="tabs" id="tabs" role="group" aria-label="Choose a game"></div>
+  </header>
+
+  <section class="hero" aria-label="Summary">
+    <div class="panel">
+      <div class="lbl">K/D ratio</div>
+      <div class="big" id="kd">–</div>
+      <div class="form-strip" id="strip" aria-label="Last 20 results"></div>
+      <div class="lbl" style="margin-top:8px" id="striplbl"></div>
+    </div>
+    <div class="panel stat"><div class="lbl">Win rate</div><div class="big" id="wr">–</div><div class="lbl" id="record"></div></div>
+    <div class="panel stat"><div class="lbl">Current rank</div><div class="big" id="rank" style="font-size:1.9rem;padding-top:10px">–</div><div class="lbl" id="matches"></div></div>
+  </section>
+
+  <section class="grid">
+    <div class="panel">
+      <h2>K/D trend</h2>
+      <div id="chart"></div>
+    </div>
+    <div class="panel">
+      <h2>Goals</h2>
+      <div id="goals"></div>
+    </div>
+  </section>
+
+  <section class="panel" style="margin-bottom:16px">
+    <h2>Log a match</h2>
+    <div class="fields">
+      <div><label for="f-res">Result</label><select id="f-res"><option value="W">Win</option><option value="L">Loss</option></select></div>
+      <div><label for="f-k">Kills</label><input id="f-k" type="number" min="0" value="0"></div>
+      <div><label for="f-d">Deaths</label><input id="f-d" type="number" min="0" value="0"></div>
+      <div><label for="f-a">Assists</label><input id="f-a" type="number" min="0" value="0"></div>
+      <div><label for="f-n">Map or mode</label><input id="f-n" type="text" maxlength="30" placeholder="Ascent, Ranked…"></div>
+      <div><button class="primary" id="add">Add match</button></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Match history</h2>
+    <div class="tablewrap" id="history"></div>
+    <div style="margin-top:12px"><button class="link" id="clear">Clear this game's data</button></div>
+  </section>
+</div>
+
+<script>
+const GAMES={
+  valorant:{name:"Valorant",ranks:["Iron","Bronze","Silver","Gold","Platinum","Diamond","Ascendant","Immortal","Radiant"]},
+  fortnite:{name:"Fortnite",ranks:["Bronze","Silver","Gold","Platinum","Diamond","Elite","Champion","Unreal"]},
+  overwatch:{name:"Overwatch 2",ranks:["Bronze","Silver","Gold","Platinum","Diamond","Master","Grandmaster","Champion"]},
+  lol:{name:"League of Legends",ranks:["Iron","Bronze","Silver","Gold","Platinum","Emerald","Diamond","Master","Grandmaster","Challenger"]}
+};
+const KEY="gaming-stats-tracker-v1";
+let S={game:"valorant",data:{}};
+try{const raw=localStorage.getItem(KEY);if(raw)S=Object.assign(S,JSON.parse(raw))}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function cur(){
+  if(!S.data[S.game])S.data[S.game]={matches:[],rank:0,goalRank:GAMES[S.game].ranks.length-1,goalKd:1.2,goalWr:55};
+  return S.data[S.game];
+}
+const $=id=>document.getElementById(id);
+function el(tag,text,cls){const e=document.createElement(tag);if(text!=null)e.textContent=text;if(cls)e.className=cls;return e}
+function tot(ms){
+  let k=0,d=0,a=0,w=0;ms.forEach(m=>{k+=m.k;d+=m.d;a+=m.a;if(m.r==="W")w++});
+  return{k,d,a,w,n:ms.length,kd:d?k/d:k,wr:ms.length?w/ms.length*100:0};
+}
+
+function renderTabs(){
+  const t=$("tabs");t.textContent="";
+  Object.keys(GAMES).forEach(id=>{
+    const b=el("button",GAMES[id].name,"tab");
+    b.setAttribute("aria-pressed",id===S.game);
+    b.onclick=()=>{S.game=id;save();render()};
+    t.appendChild(b);
+  });
+}
+
+function renderSummary(){
+  const D=cur(),T=tot(D.matches);
+  $("kd").textContent=T.n?T.kd.toFixed(2):"–";
+  $("wr").textContent=T.n?Math.round(T.wr)+"%":"–";
+  $("record").textContent=T.n?T.w+" wins, "+(T.n-T.w)+" losses":"No matches yet";
+  $("rank").textContent=GAMES[S.game].ranks[D.rank];
+  $("matches").textContent=T.n+(T.n===1?" match logged":" matches logged");
+  const strip=$("strip");strip.textContent="";
+  D.matches.slice(-20).forEach(m=>{const i=el("i");if(m.r==="L")i.className="l";i.title=m.r==="W"?"Win":"Loss";strip.appendChild(i)});
+  $("striplbl").textContent=D.matches.length?"Last "+Math.min(20,D.matches.length)+" results, oldest to newest":"Log your first match to see your form here.";
+}
+
+function renderChart(){
+  const D=cur(),box=$("chart");box.textContent="";
+  if(D.matches.length<2){box.appendChild(el("div","Log at least 2 matches to see your K/D trend.","empty"));return}
+  let k=0,d=0;const all=D.matches.map(m=>{k+=m.k;d+=m.d;return d?k/d:k});
+  const pts=all.slice(-30),goal=D.goalKd;
+  const lo=Math.min(...pts,goal)*0.9,hi=Math.max(...pts,goal)*1.1,W=600,H=180,p=28;
+  const x=i=>p+i*(W-p*2)/(pts.length-1),y=v=>H-p-(v-lo)/(hi-lo||1)*(H-p*2);
+  const NS="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(NS,"svg");svg.setAttribute("viewBox","0 0 "+W+" "+H);svg.setAttribute("class","chart");
+  svg.setAttribute("role","img");svg.setAttribute("aria-label","Running K/D over your last "+pts.length+" matches");
+  function add(tag,attrs,text){const n=document.createElementNS(NS,tag);for(const a in attrs)n.setAttribute(a,attrs[a]);if(text)n.textContent=text;svg.appendChild(n);return n}
+  add("line",{x1:p,x2:W-p,y1:y(goal),y2:y(goal),stroke:"#ffc857","stroke-dasharray":"5 5","stroke-width":1.5});
+  add("text",{x:W-p,y:y(goal)-6,"text-anchor":"end",fill:"#ffc857","font-size":12},"Goal "+goal);
+  add("polyline",{points:pts.map((v,i)=>x(i)+","+y(v)).join(" "),fill:"none",stroke:"#4fe0b0","stroke-width":3,"stroke-linejoin":"round"});
+  add("circle",{cx:x(pts.length-1),cy:y(pts[pts.length-1]),r:5,fill:"#4fe0b0"});
+  add("text",{x:p,y:H-6,fill:"#9d99c9","font-size":12},"Running K/D, last "+pts.length+" matches");
+  box.appendChild(svg);
+}
+
+function goalRow(label,value,pct,done){
+  const g=el("div",null,"goal"),r=el("div",null,"goal-row");
+  r.appendChild(el("span",label));r.appendChild(el("span",value));
+  const b=el("div",null,"bar"),s=el("span");s.style.width=Math.max(0,Math.min(100,pct))+"%";if(done)s.className="done";
+  b.appendChild(s);g.appendChild(r);g.appendChild(b);return g;
+}
+function field(label,node){const w=el("div");const l=el("label",label);l.style.marginTop="8px";w.appendChild(l);w.appendChild(node);return w}
+
+function renderGoals(){
+  const D=cur(),T=tot(D.matches),R=GAMES[S.game].ranks,box=$("goals");box.textContent="";
+  box.appendChild(goalRow("K/D "+(T.n?T.kd.toFixed(2):"–")+" of "+D.goalKd,T.kd>=D.goalKd&&T.n?"Reached":"",T.kd/D.goalKd*100,T.n&&T.kd>=D.goalKd));
+  box.appendChild(goalRow("Win rate "+(T.n?Math.round(T.wr):"–")+"% of "+D.goalWr+"%",T.wr>=D.goalWr&&T.n?"Reached":"",T.wr/D.goalWr*100,T.n&&T.wr>=D.goalWr));
+  box.appendChild(goalRow("Rank "+R[D.rank]+" to "+R[D.goalRank],D.rank>=D.goalRank?"Reached":"",(D.rank+1)/(D.goalRank+1)*100,D.rank>=D.goalRank));
+
+  const rs=el("select"),gs=el("select");
+  R.forEach((n,i)=>{rs.add(new Option(n,i));gs.add(new Option(n,i))});
+  rs.value=D.rank;gs.value=D.goalRank;
+  rs.onchange=()=>{D.rank=+rs.value;save();render()};
+  gs.onchange=()=>{D.goalRank=+gs.value;save();render()};
+  const kd=el("input");kd.type="number";kd.step="0.1";kd.min="0.1";kd.value=D.goalKd;
+  kd.onchange=()=>{D.goalKd=Math.max(0.1,+kd.value||1);save();render()};
+  const wr=el("input");wr.type="number";wr.min="1";wr.max="100";wr.value=D.goalWr;
+  wr.onchange=()=>{D.goalWr=Math.min(100,Math.max(1,+wr.value||50));save();render()};
+  const f=el("div");f.style.cssText="display:grid;grid-template-columns:1fr 1fr;gap:0 12px";
+  f.appendChild(field("Current rank",rs));f.appendChild(field("Target rank",gs));
+  f.appendChild(field("Target K/D",kd));f.appendChild(field("Target win rate %",wr));
+  box.appendChild(f);
+}
+
+function renderHistory(){
+  const D=cur(),box=$("history");box.textContent="";
+  if(!D.matches.length){box.appendChild(el("div","No matches yet. Add one above to start your history.","empty"));return}
+  const t=el("table"),hd=el("tr");
+  ["Date","Result","Map or mode","K / D / A","K/D",""].forEach(h=>hd.appendChild(el("th",h)));
+  t.appendChild(hd);
+  D.matches.map((m,i)=>[m,i]).reverse().slice(0,50).forEach(([m,i])=>{
+    const r=el("tr");
+    r.appendChild(el("td",new Date(m.t).toLocaleDateString()));
+    r.appendChild(el("td",m.r==="W"?"Win":"Loss",m.r==="W"?"w":"l"));
+    r.appendChild(el("td",m.n||"–"));
+    r.appendChild(el("td",m.k+" / "+m.d+" / "+m.a));
+    r.appendChild(el("td",(m.d?m.k/m.d:m.k).toFixed(2)));
+    const td=el("td"),b=el("button","Delete","link");
+    b.setAttribute("aria-label","Delete match from "+new Date(m.t).toLocaleDateString());
+    b.onclick=()=>{D.matches.splice(i,1);save();render()};
+    td.appendChild(b);r.appendChild(td);t.appendChild(r);
+  });
+  box.appendChild(t);
+}
+
+function render(){renderTabs();renderSummary();renderChart();renderGoals();renderHistory()}
+
+$("add").onclick=()=>{
+  const num=id=>Math.max(0,Math.floor(+$(id).value||0));
+  cur().matches.push({r:$("f-res").value,k:num("f-k"),d:num("f-d"),a:num("f-a"),n:$("f-n").value.trim(),t:Date.now()});
+  ["f-k","f-d","f-a"].forEach(id=>$(id).value=0);$("f-n").value="";
+  save();render();
+};
+$("clear").onclick=()=>{
+  if(confirm("Delete all "+GAMES[S.game].name+" matches and goals? This cannot be undone.")){delete S.data[S.game];save();render()}
+};
+render();
+</script>
+</body>
+</html>
